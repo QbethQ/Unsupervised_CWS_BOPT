@@ -49,7 +49,7 @@ texts = [i for i in texts if len(i) > 1]
 num_sample = len(texts)
 output_dir = './saved_models'
 
-def train1(model, start=0, end=num_training_steps, save_model=True):
+def train1(model, start=0, end=0, save_model=True):
     '''
     discriminative module learns from generative module
     '''
@@ -134,7 +134,7 @@ def train1(model, start=0, end=num_training_steps, save_model=True):
         state_dict = coreModel.state_dict()
         torch.save(state_dict, os.path.join(output_dir, f"SegmentBERT_{dataset}_{end // (learning_epoch // 2)}.pkl"))
 
-def train2(model, start=0, end=num_training_steps, save_model=True):
+def train2(model, start=0, end=0, save_model=True):
     '''
     generative module learns from discriminative module
     '''
@@ -229,7 +229,7 @@ optimizer = AdamW(model.parameters(), lr=1e-4)
 scheduler_class = get_linear_schedule_with_warmup
 scheduler_args = {'num_warmup_steps':int(0.1*num_training_steps), 'num_training_steps':num_training_steps}
 scheduler = scheduler_class(**{'optimizer':optimizer}, **scheduler_args)
-train1(model, save_model=False)
+train1(model, start=0, end=num_training_steps, save_model=False)
 # save model
 coreModel = model.module if hasattr(model, "module") else model
 state_dict = coreModel.state_dict()
