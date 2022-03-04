@@ -5,8 +5,8 @@ tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab
 
 def label2text_ids(text_ids, labels):
     '''
-    Input a list of token ids and a list of labels,
-    Return a list of words.
+    Input: a list of token ids and a list of labels,
+    Return: a list of words.
 
     e.g. text_ids=[x1, x2, x3, x4, x5, x6], labels=[0, 0, 1, 0, 0, 1]
          --> [[x1], [x2, x3], [x4], [x5, x6]]
@@ -24,8 +24,8 @@ def label2text_ids(text_ids, labels):
 
 def text_ids2label(word_ids_list):
     '''
-    Input a list of words,
-    Return a list of labels.
+    Input: a list of words,
+    Return: a list of labels.
 
     e.g. word_ids_list=[[x1], [x2, x3], [x4], [x5, x6]]
          --> [0, 0, 1, 0, 0, 1]
@@ -43,8 +43,8 @@ def text_ids2label(word_ids_list):
 
 def label2text(text, labels):
     '''
-    Input a string and a list of labels,
-    Return segmented text.
+    Input: a string and a list of labels,
+    Return: segmented text.
 
     e.g. text='我喜欢写代码' (I love writing code) , labels=[0, 0, 1, 0, 0, 1]
          --> '我  喜欢  写  代码'
@@ -68,8 +68,8 @@ def label2text(text, labels):
 
 def text2label(seg_text):
     '''
-    Input segmented text
-    Return a list of labels
+    Input: segmented text
+    Return: a list of labels
 
     e.g. seg_text='我  喜欢  写  代码' (I love writing code)
          --> [0, 0, 1, 0, 0, 1]

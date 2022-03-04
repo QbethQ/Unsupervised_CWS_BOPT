@@ -2,7 +2,7 @@ import re
 
 def cut_sentence(text):
     '''
-    Cut paragraph into sentences because the maximun length of input of BERT is 512.
+    Cut paragraph into sentences because BERT has a maximum input length of 512.
     '''
     sentences = re.split(r"(？|。|！|……|“|”|‘|’)", text)
     sentences.append("")
@@ -21,7 +21,9 @@ def unk_process(text, result_text):
     '''
     Process '[UNK]' because there are some tokens unknown to BERT. 
 
-    Process Uppercase letters, because BERT encode both uppercase letters and lowercase letters into the same tokens, which will be decoded into only lowercase letters.
+    Process Uppercase letters, because BERT encode both uppercase letters
+    and lowercase letters into the same tokens, which will be decoded into 
+    only lowercase letters.
 
     *** This is not post-process ***
     '''

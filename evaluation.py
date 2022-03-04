@@ -63,7 +63,7 @@ def compare(model, input_ids, i, device):
         return 'left'
 
 dataset = 'pku' # 'msr'
-model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(1, 16)]
+model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(1, 17)]
 
 for model_name in model_names:
     state_dict = torch.load('saved_models/' + model_name +'.pkl', map_location='cpu')
@@ -76,14 +76,14 @@ for model_name in model_names:
                 final_result = str()
                 for seg_sentence in seg_sentences:
                     if len(seg_sentence) > 510:
-                        print(seg_sentence, "length > 510, can't processed by BERT.  ")
+                        print(seg_sentence, "length > 510, can't be processed by BERT.  ")
                         continue
                     seg_result = seg_seqlab(seg_sentence, model, device=device)
                     final_result += seg_result
                 fo.write(final_result)
                 fo.write('\n')
 
-    os.system(f"dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/valid/{dataset}_dev.utf8 experiment_result/temp_segmented1.utf8 > experiment_result/temp_score.utf8")
+    os.system(f"perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/development_set/{dataset}_dev.utf8 experiment_result/temp_segmented1.utf8 > experiment_result/temp_score.utf8")
 
     with open(f"experiment_result/temp_segmented1.utf8", 'r') as ff:
         text = ff.readlines()
@@ -120,6 +120,7 @@ for model_name in model_names:
     
     with open('experiment_result/temp_score.utf8', 'r') as ff:
         t = ff.readlines()
-    print(f"----{model_name} Result----")
-    print(t[-7]+t[-6]+t[-5])
-    print("evaluation_score: {} / {} = {}\n".format(correct, total, evaluation_score))
+    with open('experiment_result/SegmentBERT_{}_evaluation_result.txt'.format(dataset), 'a') as rf:
+        rf.write(f"----{model_name} Result----\n")
+        rf.write(t[-7]+t[-6]+t[-5])
+        rf.write("evaluation_score: {} / {} = {}\n\n".format(correct, total, evaluation_score))
