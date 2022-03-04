@@ -1,14 +1,16 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"       ### only use two GPUs
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss, MSELoss
 import torch.nn.functional as F
 from transformers import BertTokenizer, BertConfig, AdamW
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup, get_constant_schedule_with_warmup
 from tqdm import tqdm
 import numpy as np
 from sentence_process import cut_sentence
 from SegmentBERT import SegmentBERT
-import os
 import random
 
 punctuation_ids = {'，': 8024, '。': 511, '（': 8020, '）': 8021, '《': 517, '》': 518, '"': 107, '\'':112, '！': 8013, '、': 510, '℃': 360, '##℃': 8320, '：': 8038, '；': 8039, '？': 8043, '…': 8106, '●': 474, '／': 8027, '①': 405, '②': 406, '③': 407, '④': 408, '⑤': 409, '⑥': 410, '⑦': 411, '⑧': 412, '⑨': 413, '⑩': 414, '＊': 8022, '〈': 515, '〉': 516, '『': 521, '』': 522, '＇': 8019, '｀': 8050, '.': 119, '「': 519, '」': 520}
@@ -22,7 +24,7 @@ def dist(x, y):
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab.txt')
 bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_config.json')
 
-device = torch.device('cuda:0')
+device = 0
 
 model = SegmentBERT(bert_config)
 state_dict = model.state_dict()
@@ -36,10 +38,11 @@ for n, p in enumerate(state_dict.keys()):
 model.load_state_dict(state_dict)
 
 if torch.cuda.device_count() > 1:
-    model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model.to(device=device)
 
 dataset = 'pku' # 'pku' or 'msr'
+output_dir = './saved_models'
 
 texts = []
 with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f:
@@ -47,7 +50,6 @@ with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f:
         texts.extend(cut_sentence(line))
 texts = [i for i in texts if len(i) > 1]
 num_sample = len(texts)
-output_dir = './saved_models'
 
 def train1(model, start=0, end=0, save_model=True):
     '''
@@ -117,10 +119,10 @@ def train1(model, start=0, end=0, save_model=True):
 
         # count total loss and backward
         if ((epoch + 1) % 32 == 0) or (epoch == end - 1):
-            k_m = 0.3
+            k_m = 0.30
             k_d = 1 - k_m
             loss = k_m * masked_lm_loss + k_d * discriminative_loss
-            print("epoch {}, {} * masked_lm_loss = {}, {} * discriminative_loss = {}, loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_d, k_d * discriminative_loss, loss))
+            print("epoch {}:\n\t{} * masked_lm_loss = {}\n\t{} * discriminative_loss = {}\n\ttotal loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_d, k_d * discriminative_loss, loss))
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -148,10 +150,9 @@ def train2(model, start=0, end=0, save_model=True):
         input_ids.insert(0, 101)
         input_ids.insert(length + 1, 102)
 
+        # random mask to count masked_lm_loss
         masked_lm_input_ids = torch.tensor(input_ids)
         masked_lm_labels = torch.tensor(input_ids)
-
-        # random mask to count masked_lm_loss
         for i in range(1, length + 1):
             r = random.random()
             if r < 0.12:
@@ -208,7 +209,7 @@ def train2(model, start=0, end=0, save_model=True):
             k_m = 0.80
             k_g = 1.00 - k_m
             loss = k_m * masked_lm_loss + k_g * generative_loss
-            print("epoch {},  {} * masked_lm_loss = {}, {} * generative_loss = {}, loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_g, k_g * generative_loss, loss))
+            print("epoch {}:\n\t{} * masked_lm_loss = {}\n\t{} * discriminative_loss = {}\n\ttotal loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_g, k_g * generative_loss, loss))
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -226,8 +227,8 @@ def train2(model, start=0, end=0, save_model=True):
 num_epochs = 2
 num_training_steps = num_sample * num_epochs
 optimizer = AdamW(model.parameters(), lr=1e-4)
-scheduler_class = get_linear_schedule_with_warmup
-scheduler_args = {'num_warmup_steps':int(0.1*num_training_steps), 'num_training_steps':num_training_steps}
+scheduler_class = get_constant_schedule_with_warmup
+scheduler_args = {'num_warmup_steps':int(0.5*num_training_steps)}
 scheduler = scheduler_class(**{'optimizer':optimizer}, **scheduler_args)
 train1(model, start=0, end=num_training_steps, save_model=False)
 # save model
@@ -241,10 +242,10 @@ num_training_steps = num_sample * num_epochs
 optimizer = AdamW(model.parameters(), lr=1e-4)
 scheduler_class = get_linear_schedule_with_warmup
 scheduler_args = {'num_warmup_steps':int(0.1*num_training_steps), 'num_training_steps':num_training_steps}
-scheduler = scheduler_class(**{'optimizer':optimizer},**scheduler_args)
+scheduler = scheduler_class(**{'optimizer':optimizer}, **scheduler_args)
 learning_epoch = 3200
 n = (num_training_steps // learning_epoch) + 1
 for i in range(n):
-    print("{} / {} big epochs:".format(i + 1, n))
+    print("Iterative training: {} / {}".format(i + 1, n))
     train2(model=model, start=i * learning_epoch, end=i * learning_epoch + learning_epoch // 2)
     train1(model=model, start=i * learning_epoch + learning_epoch // 2, end=(i + 1) * learning_epoch)

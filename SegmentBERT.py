@@ -8,6 +8,8 @@ class SegmentBERT(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
+        config.attention_probs_dropout_prob = 0.0
+        config.hidden_dropout_prob = 0.0
 
         self.bert = BertModel(config)
         self.cls = BertOnlyMLMHead(config)

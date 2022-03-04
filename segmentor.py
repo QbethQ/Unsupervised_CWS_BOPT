@@ -1,3 +1,4 @@
+import os
 import torch
 from transformers import BertTokenizer, BertConfig
 from sentence_process import cut_sentence
@@ -33,22 +34,22 @@ bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_co
 model = SegmentBERT(bert_config)
 model.to(device=device)
 
-state_dict = torch.load(f'saved_models/SegmentBERT_pku_11.pkl', map_location='cpu')
-# state_dict = torch.load(f'saved_models/SegmentBERT_msr_1.pkl', map_location='cpu')
+dataset = 'pku' # 'pku' or 'msr'
+i = 11 # model number
+state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_{i}.pkl', map_location='cpu')
 model.load_state_dict(state_dict)
-with open(f"experiment_result/SegmentBERT_pku_test_segmented.utf8", "w") as fo:
-    with open('dataset/testing/pku_test.utf8', 'r') as f1:
-# with open(f"experiment_result/SegmentBERT_msr_test_segmented.utf8", "w") as fo:
-#     with open('dataset/testing/msr_test.utf8', 'r') as f1:
+with open(f"experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8", "w") as fo:
+    with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f1:
         text = f1.readlines()
         for line in text:
             sentences = cut_sentence(line)
             final_result = str()
             for sentence in sentences:
                 if len(sentence) > 510:
-                    print(sentence, "length > 510, can't processed by BERT.")
+                    print(sentence, "length > 510, can't be processed by BERT.")
                     continue
                 result = seg(sentence, model)
                 final_result += result
             fo.write(final_result)
             fo.write('\n')
+os.system(f'perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/gold/{dataset}_test_gold.utf8 experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8 > experiment_result/SegmentBERT_{dataset}_test_score_{i}.utf8')
