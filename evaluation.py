@@ -62,8 +62,8 @@ def compare(model, input_ids, i, device):
     else:
         return 'left'
 
-dataset = 'pku' # 'msr'
-model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(1, 17)]
+dataset = 'pku' # 'pku' or 'msr'
+model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(1, 37)]
 
 for model_name in model_names:
     state_dict = torch.load('saved_models/' + model_name +'.pkl', map_location='cpu')
