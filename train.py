@@ -48,7 +48,14 @@ texts = []
 with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f:
     for line in f.readlines():
         texts.extend(cut_sentence(line))
-texts = [i for i in texts if len(i) > 1]
+dataset = 'pku_aug'
+if dataset == 'pku_aug':
+    with open(f'dataset/un_seg.txt', 'r') as f:
+        lines = f.readlines()[:50782]
+    for line in lines:
+        if len(line) > 1:
+            texts.extend(cut_sentence(line[19:]))
+texts = [i for i in texts if len(i) > 1 and len(i) < 510]
 num_sample = len(texts)
 
 def train1(model, start=0, end=0, save_model=True):
