@@ -4,7 +4,7 @@ This is the source code of ***Unsupervised Chinese Word Segmentation with BERT O
 ## To run
 First download pre-trained BERT model and put in this directory. Add `"num_labels": 2` in `bert-base-chinese-pytorch_model/bert_config.json`.
 
-Run `train.py` to train models. This may spend lots of time.
+Run `train.py` to train models. This may take a lot of time.
 - Specify a dataset: modify the code in line 44 to `dataset = 'pku'` to train on PKU dataset, and to `dataset = 'msr'` to train on MSR dataset.
 - Specify an output directory: modify the code in line 45.
 - You can also change some training settings in line 227-232 and 240-246.
