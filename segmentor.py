@@ -35,8 +35,8 @@ model = SegmentBERT(bert_config)
 model.to(device=device)
 
 dataset = 'pku' # 'pku' or 'msr'
-i = 'Discriminative_1' # model number or 'Discriminative_i'
-for i in ['Discriminative_1', 'Discriminative_2']:
+i = 'Discriminative' # model number or 'Discriminative_i'
+for i in ['Discriminative']:
     state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_aug_{i}.pkl', map_location='cpu')
     model.load_state_dict(state_dict)
     with open(f"experiment_result/SegmentBERT_{dataset}_aug_test_segmented_{i}.utf8", "w") as fo:
