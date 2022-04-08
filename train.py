@@ -237,7 +237,7 @@ optimizer = AdamW(model.parameters(), lr=1e-4)
 scheduler_class = get_constant_schedule_with_warmup
 scheduler_args = {'num_warmup_steps':int(0.5*num_training_steps)}
 scheduler = scheduler_class(**{'optimizer':optimizer}, **scheduler_args)
-train1(model, start=0, end=num_training_steps, save_model=False)
+train1(model, start=0, end=num_training_steps // 2, save_model=False)
 # save model
 coreModel = model.module if hasattr(model, "module") else model
 state_dict = coreModel.state_dict()

@@ -26,7 +26,7 @@ def seg(text, model):
     result = label2text(text, labels)
     return result
 
-device = torch.device('cuda:2')
+device = torch.device('cuda:3')
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab.txt')
 bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_config.json')
@@ -35,21 +35,40 @@ model = SegmentBERT(bert_config)
 model.to(device=device)
 
 dataset = 'pku' # 'pku' or 'msr'
-i = 11 # model number
-state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_{i}.pkl', map_location='cpu')
-model.load_state_dict(state_dict)
-with open(f"experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8", "w") as fo:
-    with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f1:
-        text = f1.readlines()
-        for line in text:
-            sentences = cut_sentence(line)
-            final_result = str()
-            for sentence in sentences:
-                if len(sentence) > 510:
-                    print(sentence, "length > 510, can't be processed by BERT.")
-                    continue
-                result = seg(sentence, model)
-                final_result += result
-            fo.write(final_result)
-            fo.write('\n')
-os.system(f'perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/gold/{dataset}_test_gold.utf8 experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8 > experiment_result/SegmentBERT_{dataset}_test_score_{i}.utf8')
+i = 'Discriminative_1' # model number or 'Discriminative_i'
+for i in ['Discriminative_1', 'Discriminative_2']:
+    state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_aug_{i}.pkl', map_location='cpu')
+    model.load_state_dict(state_dict)
+    with open(f"experiment_result/SegmentBERT_{dataset}_aug_test_segmented_{i}.utf8", "w") as fo:
+        with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f1:
+            text = f1.readlines()
+            for line in text:
+                sentences = cut_sentence(line)
+                final_result = str()
+                for sentence in sentences:
+                    if len(sentence) > 510:
+                        print(sentence, "length > 510, can't be processed by BERT.")
+                        continue
+                    result = seg(sentence, model)
+                    final_result += result
+                fo.write(final_result)
+                fo.write('\n')
+    os.system(f'perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/gold/{dataset}_test_gold.utf8 experiment_result/SegmentBERT_{dataset}_aug_test_segmented_{i}.utf8 > experiment_result/SegmentBERT_{dataset}_aug_test_score_{i}.utf8')
+for i in range(1,361):
+    state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_aug_{i}.pkl', map_location='cpu')
+    model.load_state_dict(state_dict)
+    with open(f"experiment_result/SegmentBERT_{dataset}_aug_test_segmented_{i}.utf8", "w") as fo:
+        with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f1:
+            text = f1.readlines()
+            for line in text:
+                sentences = cut_sentence(line)
+                final_result = str()
+                for sentence in sentences:
+                    if len(sentence) > 510:
+                        print(sentence, "length > 510, can't be processed by BERT.")
+                        continue
+                    result = seg(sentence, model)
+                    final_result += result
+                fo.write(final_result)
+                fo.write('\n')
+    os.system(f'perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/gold/{dataset}_test_gold.utf8 experiment_result/SegmentBERT_{dataset}_aug_test_segmented_{i}.utf8 > experiment_result/SegmentBERT_{dataset}_aug_test_score_{i}.utf8')
