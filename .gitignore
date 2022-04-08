@@ -132,3 +132,7 @@ dmypy.json
 /saved_models
 /bert-base-chinese-pytorch_model
 nohup*
+eval*
+score_bat.py
+test*
+train_no_mlm.py
