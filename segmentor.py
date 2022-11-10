@@ -29,6 +29,7 @@ def seg(text, model):
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', dest='dataset', type=str, help='Name of the dataset', required=True, choices=['pku', 'msr'])
 parser.add_argument('--gpu_id', dest='gpu_id', default='0', type=str, help='ID of the GPU to use')
+parser.add_argument('--model_dir', dest='model_dir', default='./saved_models', type=str, help='The directory where the models were saved')
 parser.add_argument('--model', dest='model', default=0, type=int, help='Number of the model to use')
 args = parser.parse_args()
 
@@ -36,6 +37,7 @@ dataset = args.dataset # 'pku' or 'msr'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 device = 0
+model_dir = args.model_dir
 i = args.model # model number
 
 cvt = converter(dataset=dataset)
@@ -45,7 +47,7 @@ bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_co
 
 model = SegmentBERT(bert_config)
 model.to(device=device)
-state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_{i}.pkl', map_location='cpu')
+state_dict = torch.load(f'{model_dir}/SegmentBERT_{dataset}_{i}.pkl', map_location='cpu')
 model.load_state_dict(state_dict)
 with open(f"experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8", "w") as fo:
     with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f1:

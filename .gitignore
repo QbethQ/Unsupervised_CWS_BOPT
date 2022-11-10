@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# log
+*.log
+
+# model and results
+bert-base-chinese-pytorch_model/
+saved_models/
+experiment_result/

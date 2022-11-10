@@ -1,5 +1,6 @@
-future==0.18.2
-numpy==1.17.0
-torch==1.2.0
-tqdm==4.62.0
+cudatoolkit==11.3.1
+numpy==1.19.2
+python==3.6.13
+pytorch==1.10.1
+tqdm==4.64.1
 transformers==2.8.0
