@@ -1,17 +1,29 @@
 import torch
 from transformers import BertTokenizer, BertConfig
-from sentence_process import cut_sentence
-from text2label import label2text, text2label
+from util import cut_sentence, converter
 from SegmentBERT import SegmentBERT
 from tqdm import tqdm
 import os
+import argparse
 
 punctuation_ids = {'，': 8024, '。': 511, '（': 8020, '）': 8021, '《': 517, '》': 518, '"': 107, '\'':112, '！': 8013, '、': 510, '℃': 360, '##℃': 8320, '：': 8038, '；': 8039, '？': 8043, '…': 8106, '●': 474, '／': 8027, '①': 405, '②': 406, '③': 407, '④': 408, '⑤': 409, '⑥': 410, '⑦': 411, '⑧': 412, '⑨': 413, '⑩': 414, '＊': 8022, '〈': 515, '〉': 516, '『': 521, '』': 522, '＇': 8019, '｀': 8050, '.': 119, '「': 519, '」': 520}
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', dest='dataset', type=str, help='Name of the dataset', required=True, choices=['pku', 'msr'])
+parser.add_argument('--gpu_id', dest='gpu_id', default='0', type=str, help='ID of the GPU to use')
+parser.add_argument('--model_dir', dest='model_dir', default='./saved_models', type=str, help='The directory where the models were saved')
+args = parser.parse_args()
+
+dataset = args.dataset # 'pku' or 'msr'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+device = 0
+model_dir = args.model_dir
+
+cvt = converter(dataset=dataset)
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab.txt')
 bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_config.json')
-
-device = torch.device('cuda:2')
 
 model = SegmentBERT(bert_config)
 model.to(device = device)
@@ -32,7 +44,7 @@ def seg_seqlab(text, model, device):
             labels.append(0)
         else:
             labels.append(1)
-    result = label2text(text, labels)
+    result = cvt.label2text(text, labels)
     return result
 
 def compare(model, input_ids, i, device):
@@ -62,13 +74,12 @@ def compare(model, input_ids, i, device):
     else:
         return 'left'
 
-dataset = 'pku' # 'pku' or 'msr'
-model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(1, 37)]
+model_names = ['SegmentBERT_{}_{}'.format(dataset, i) for i in range(37)]
 
 for model_name in model_names:
-    state_dict = torch.load('saved_models/' + model_name +'.pkl', map_location='cpu')
+    state_dict = torch.load(model_dir + '/' + model_name + '.pkl', map_location='cpu')
     model.load_state_dict(state_dict)
-    with open(f"experiment_result/temp_segmented1.utf8", "w") as fo:
+    with open(f"experiment_result/temp_segmented_{dataset}.utf8", "w") as fo:
         with open(f'dataset/development_set/{dataset}_dev_unseg.utf8', 'r') as f1:
             seg_text = f1.readlines()
             for line in seg_text:
@@ -83,14 +94,14 @@ for model_name in model_names:
                 fo.write(final_result)
                 fo.write('\n')
 
-    os.system(f"perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/development_set/{dataset}_dev.utf8 experiment_result/temp_segmented1.utf8 > experiment_result/temp_score.utf8")
+    os.system(f"perl dataset/scripts/score dataset/gold/{dataset}_training_words.utf8 dataset/development_set/{dataset}_dev.utf8 experiment_result/temp_segmented_{dataset}.utf8 > experiment_result/temp_score_{dataset}.utf8")
 
-    with open(f"experiment_result/temp_segmented1.utf8", 'r') as ff:
+    with open(f"experiment_result/temp_segmented_{dataset}.utf8", 'r') as ff:
         text = ff.readlines()
     total = 0
     correct = 0
     for string in tqdm(text, mininterval=10):
-        ground_truth_label = text2label(string)
+        ground_truth_label = cvt.text2label(string)
         string = string.replace('  ', '')
         sentences = cut_sentence(string)
         length = 0
@@ -118,7 +129,7 @@ for model_name in model_names:
                         correct += 1
     evaluation_score = correct / total
     
-    with open('experiment_result/temp_score.utf8', 'r') as ff:
+    with open('experiment_result/temp_score_{}.utf8'.format(dataset), 'r') as ff:
         t = ff.readlines()
     with open('experiment_result/SegmentBERT_{}_evaluation_result.txt'.format(dataset), 'a') as rf:
         rf.write(f"----{model_name} Result----\n")

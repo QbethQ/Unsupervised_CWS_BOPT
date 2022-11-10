@@ -1,6 +1,4 @@
 import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"       ### only use two GPUs
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss, MSELoss
@@ -9,9 +7,10 @@ from transformers import BertTokenizer, BertConfig, AdamW
 from transformers import get_linear_schedule_with_warmup, get_constant_schedule_with_warmup
 from tqdm import tqdm
 import numpy as np
-from sentence_process import cut_sentence
+from util import cut_sentence
 from SegmentBERT import SegmentBERT
 import random
+import argparse
 
 punctuation_ids = {'，': 8024, '。': 511, '（': 8020, '）': 8021, '《': 517, '》': 518, '"': 107, '\'':112, '！': 8013, '、': 510, '℃': 360, '##℃': 8320, '：': 8038, '；': 8039, '？': 8043, '…': 8106, '●': 474, '／': 8027, '①': 405, '②': 406, '③': 407, '④': 408, '⑤': 409, '⑥': 410, '⑦': 411, '⑧': 412, '⑨': 413, '⑩': 414, '＊': 8022, '〈': 515, '〉': 516, '『': 521, '』': 522, '＇': 8019, '｀': 8050, '.': 119, '「': 519, '」': 520}
 
@@ -21,10 +20,20 @@ def dist(x, y):
     '''
     return np.sqrt(((x - y)**2).sum())
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', dest='dataset', type=str, help='Name of the dataset', required=True, choices=['pku', 'msr'])
+parser.add_argument('--gpu_id', dest='gpu_id', default='0', type=str, help='ID of the GPU to use')
+parser.add_argument('--output_dir', dest='output_dir', default='./saved_models', type=str, help='The directory where the models will be saved')
+args = parser.parse_args()
+
+dataset = args.dataset # 'pku' or 'msr'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+device = 0
+output_dir = args.output_dir
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab.txt')
 bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_config.json')
-
-device = 0
 
 model = SegmentBERT(bert_config)
 state_dict = model.state_dict()
@@ -40,9 +49,6 @@ model.load_state_dict(state_dict)
 if torch.cuda.device_count() > 1:
     model = torch.nn.DataParallel(model, device_ids=[0, 1])
 model.to(device=device)
-
-dataset = 'pku' # 'pku' or 'msr'
-output_dir = './saved_models'
 
 texts = []
 with open(f'dataset/testing/{dataset}_test.utf8', 'r') as f:
@@ -122,7 +128,7 @@ def train1(model, start=0, end=0, save_model=True):
             k_m = 0.30
             k_d = 1 - k_m
             loss = k_m * masked_lm_loss + k_d * discriminative_loss
-            print("epoch {}:\n\t{} * masked_lm_loss = {}\n\t{} * discriminative_loss = {}\n\ttotal loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_d, k_d * discriminative_loss, loss))
+            print("epoch {}:\n\t{:.1f} * masked_lm_loss = {:.4f}\n\t{:.1f} * discriminative_loss = {:.4f}\n\ttotal loss = {:.4f}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_d, k_d * discriminative_loss, loss))
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -209,7 +215,7 @@ def train2(model, start=0, end=0, save_model=True):
             k_m = 0.80
             k_g = 1.00 - k_m
             loss = k_m * masked_lm_loss + k_g * generative_loss
-            print("epoch {}:\n\t{} * masked_lm_loss = {}\n\t{} * discriminative_loss = {}\n\ttotal loss = {}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_g, k_g * generative_loss, loss))
+            print("epoch {}:\n\t{:.1f} * masked_lm_loss = {:.4f}\n\t{:.1f} * discriminative_loss = {:.4f}\n\ttotal loss = {:.4f}".format(epoch + 1, k_m, k_m * masked_lm_loss, k_g, k_g * generative_loss, loss))
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -234,7 +240,7 @@ train1(model, start=0, end=num_training_steps, save_model=False)
 # save model
 coreModel = model.module if hasattr(model, "module") else model
 state_dict = coreModel.state_dict()
-torch.save(state_dict, os.path.join(output_dir, f"SegmentBERT_{dataset}_Discriminative.pkl"))
+torch.save(state_dict, os.path.join(output_dir, f"SegmentBERT_{dataset}_0.pkl"))
 
 # iterative training
 num_epochs = 10

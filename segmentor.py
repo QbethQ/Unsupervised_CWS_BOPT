@@ -1,9 +1,9 @@
 import os
 import torch
 from transformers import BertTokenizer, BertConfig
-from sentence_process import cut_sentence
-from text2label import label2text
+from util import cut_sentence, converter
 from SegmentBERT import SegmentBERT
+import argparse
 
 punctuation_ids = {'，': 8024, '。': 511, '（': 8020, '）': 8021, '《': 517, '》': 518, '"': 107, '\'':112, '！': 8013, '、': 510, '℃': 360, '##℃': 8320, '：': 8038, '；': 8039, '？': 8043, '…': 8106, '●': 474, '／': 8027, '①': 405, '②': 406, '③': 407, '④': 408, '⑤': 409, '⑥': 410, '⑦': 411, '⑧': 412, '⑨': 413, '⑩': 414, '＊': 8022, '〈': 515, '〉': 516, '『': 521, '』': 522, '＇': 8019, '｀': 8050, '.': 119, '「': 519, '」': 520}
 
@@ -23,19 +23,28 @@ def seg(text, model):
             labels.append(0)
         else:
             labels.append(1)
-    result = label2text(text, labels)
+    result = cvt.label2text(text, labels)
     return result
 
-device = torch.device('cuda:2')
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', dest='dataset', type=str, help='Name of the dataset', required=True, choices=['pku', 'msr'])
+parser.add_argument('--gpu_id', dest='gpu_id', default='0', type=str, help='ID of the GPU to use')
+parser.add_argument('--model', dest='model', default=0, type=int, help='Number of the model to use')
+args = parser.parse_args()
+
+dataset = args.dataset # 'pku' or 'msr'
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+device = 0
+i = args.model # model number
+
+cvt = converter(dataset=dataset)
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-chinese-pytorch_model/vocab.txt')
 bert_config = BertConfig.from_json_file('bert-base-chinese-pytorch_model/bert_config.json')
 
 model = SegmentBERT(bert_config)
 model.to(device=device)
-
-dataset = 'pku' # 'pku' or 'msr'
-i = 11 # model number
 state_dict = torch.load(f'saved_models/SegmentBERT_{dataset}_{i}.pkl', map_location='cpu')
 model.load_state_dict(state_dict)
 with open(f"experiment_result/SegmentBERT_{dataset}_test_segmented_{i}.utf8", "w") as fo:
